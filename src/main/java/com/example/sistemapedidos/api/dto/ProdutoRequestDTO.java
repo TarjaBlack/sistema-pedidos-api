@@ -9,6 +9,8 @@ import java.math.BigDecimal;
 
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class ProdutoRequestDTO {
     @NotBlank(message = "Nome é obrigatório")
     private String nome;
@@ -18,6 +20,5 @@ public class ProdutoRequestDTO {
 
     @NotNull(message="Categoria é obrigatória")
     private Long categoriaId;
-
 
 }
