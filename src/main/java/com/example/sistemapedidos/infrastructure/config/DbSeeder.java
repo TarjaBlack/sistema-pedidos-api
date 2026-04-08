@@ -16,14 +16,17 @@ public class DbSeeder implements CommandLineRunner {
     }
 
     @Override
-    public void run(String... args) throws Exception{
-        categoriaRepository.deleteAll();
+    public void run(String... args) throws Exception {
+        // Verifica se a tabela está vazia antes de fazer qualquer coisa
+        if (categoriaRepository.count() == 0) {
+            Categoria c1 = new Categoria(null, "Eletronicos");
+            Categoria c2 = new Categoria(null, "Perifericos");
 
-        Categoria c1 = new Categoria(null,"Eletronicos");
-        Categoria c2 = new Categoria(null, "Perifericos");
+            categoriaRepository.saveAll(List.of(c1, c2));
 
-        categoriaRepository.saveAll(List.of(c1,c2));
-
-        System.out.println("Categorias populadas com sucesso!!!");
+            System.out.println("🌱 Banco de dados estava vazio. Categorias populadas com sucesso!!!");
+        } else {
+            System.out.println("ℹ️ Categorias já existentes no banco. Pulando a semeadura.");
+        }
     }
 }

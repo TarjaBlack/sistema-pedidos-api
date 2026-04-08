@@ -1,0 +1,14 @@
+services:
+  db:
+    image: postgres:18 # Usando a versão que você baixou
+    container_name: postgres-sistema
+    environment:
+      - POSTGRES_PASSWORD=root
+      - POSTGRES_DB=pedidos_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql # Mapeamento dentro do serviço
+
+volumes: # Seção global de volumes
+  pgdata: # Observe os dois pontos aqui. Não coloque nada depois.

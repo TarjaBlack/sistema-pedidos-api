@@ -1,21 +1,47 @@
+# Configuração Padrão (PostgreSQL - Docker)
 spring:
   application:
     name: sistema-pedidos
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+  
+  profiles:
+    active: dev # Define que o perfil 'dev' (Postgres) é o padrão
+
   datasource:
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
-    driverClassName: org.h2.Driver
-    username: sa
-    password:
+    url: jdbc:postgresql://localhost:5432/pedidos_db
+    username: postgres
+    password: root
+    driver-class-name: org.postgresql.Driver
+
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: update
     show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
 server:
   error:
     include-message: always
     include-binding-errors: always
+
+---
+# Configuração para Testes (H2)
+# Este bloco só é ativado se você usar @ActiveProfiles("test")
+spring:
+  config:
+    activate:
+      on-profile: test
+
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
