@@ -36,4 +36,9 @@ public class ProdutoService {
     public List<Produto> listarTodos(){
         return produtoRepository.findAll();
     }
+
+    public Produto buscarPorId(Long id) {
+        return produtoRepository.findById(id)
+                .orElseThrow(()->new EntidadeNaoEncontradaException("Produto não encontrado com o ID" + id));
+    }
 }

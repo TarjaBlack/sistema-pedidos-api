@@ -1,12 +1,12 @@
 package com.example.sistemapedidos.api;
 
-import com.example.sistemapedidos.api.dto.CategoriaDTO;
 import com.example.sistemapedidos.api.dto.ProdutoRequestDTO;
 import com.example.sistemapedidos.api.dto.ProdutoResponseDTO;
 import com.example.sistemapedidos.api.mapper.ProdutoMapper;
 import com.example.sistemapedidos.application.ProdutoService;
 import com.example.sistemapedidos.domain.Produto;
 import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,5 +34,13 @@ public class ProdutoController {
         return service.listarTodos().stream()
                 .map(produtoMapper::toProdutoResponseDTO)
                 .toList();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ProdutoResponseDTO> buscarPorId(@PathVariable Long id){
+
+        Produto produto = service.buscarPorId(id);
+
+        return ResponseEntity.ok(produtoMapper.toProdutoResponseDTO(produto));
     }
 }
