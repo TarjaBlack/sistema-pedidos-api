@@ -16,12 +16,10 @@ import java.util.List;
 @Service
 public class ProdutoService {
     private final ProdutoRepository produtoRepository;
-    private final CategoriaRepository categoriaRepository;
     private final FinderService finderService;
 
-    public ProdutoService(ProdutoRepository produtoRepository, CategoriaRepository categoriaRepository, FinderService finderService) {
+    public ProdutoService(ProdutoRepository produtoRepository,  FinderService finderService) {
         this.produtoRepository = produtoRepository;
-        this.categoriaRepository = categoriaRepository;
         this.finderService = finderService;
     }
 
