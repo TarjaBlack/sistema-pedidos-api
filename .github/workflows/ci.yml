@@ -7,11 +7,12 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build: # Este é o nome que você vai buscar no Ruleset depois
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Configurar GraalVM 17
         uses: graalvm/setup-graalvm@v1
