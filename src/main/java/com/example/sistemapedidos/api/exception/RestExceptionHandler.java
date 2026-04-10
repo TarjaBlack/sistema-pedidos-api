@@ -10,12 +10,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class RestExceptionHandler {
 
-    @ExceptionHandler(EntidadeNaoEncontradaException.class)
-    public ResponseEntity<ErroResposta> handleNotFound(EntidadeNaoEncontradaException ex){
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErroResposta> handleGeneric(Exception ex) {
         ErroResposta erro = new ErroResposta(
-                HttpStatus.NOT_FOUND.value(),
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 ex.getMessage()
-                );
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(erro);
+        );
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(erro);
     }
 }

@@ -1,0 +1,38 @@
+name: Java CI com Maven e JaCoCo
+
+on:
+  push:
+    branches: [ "main", "dev" ] # Corre sempre que enviares para estas branches
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4 # Descarrega o teu código
+
+      - name: Configurar GraalVM 17
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '17'
+          distribution: 'graalvm'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache dos pacotes Maven
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
+      - name: Executar Testes e Validar Cobertura (JaCoCo)
+        run: mvn clean verify # O 'verify' corre os testes e o check do JaCoCo
+
+      - name: Upload do Relatório JaCoCo (Artefacto)
+        if: always() # Faz o upload mesmo que os testes falhem para poderes analisar
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorio-cobertura
+          path: target/site/jacoco/
