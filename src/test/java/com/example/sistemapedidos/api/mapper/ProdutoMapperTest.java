@@ -17,7 +17,8 @@ class ProdutoMapperTest {
     void deveMapearProdutoParaProdutoResponseDTO(){
         Categoria categoria = new Categoria();
         categoria.setId(1L);
-        categoria.setName("Eletrônicos");
+        categoria.setNome("Eletrônicos");
+
 
         Produto produto = new Produto();
         produto.setId(100L);

@@ -6,6 +6,7 @@ import com.example.sistemapedidos.api.mapper.ProdutoMapper;
 import com.example.sistemapedidos.application.ProdutoService;
 import com.example.sistemapedidos.domain.Produto;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,7 +23,20 @@ public class ProdutoController {
         this.produtoMapper = produtoMapper;
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<ProdutoResponseDTO> atualizar(@PathVariable Long id, @Valid @RequestBody ProdutoRequestDTO dto){
+        Produto produto = service.atualizar(id, dto);
+        return ResponseEntity.ok(produtoMapper.toProdutoResponseDTO(produto));
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deletar(@PathVariable Long id){
+        service.excluirLogico(id);
+    }
+
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public ProdutoResponseDTO criar(@Valid @RequestBody ProdutoRequestDTO dto){
         Produto produtoSalvo = service.salvar(dto);
 
@@ -31,7 +45,7 @@ public class ProdutoController {
 
     @GetMapping
     public List<ProdutoResponseDTO> listar(){
-        return service.listarTodos().stream()
+        return service.listarAtivos().stream()
                 .map(produtoMapper::toProdutoResponseDTO)
                 .toList();
     }

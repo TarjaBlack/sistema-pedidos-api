@@ -1,4 +1,8 @@
 package com.example.sistemapedidos.api.dto;
 
-public record CategoriaDTO(Long id, String name) {
+import jakarta.validation.constraints.NotBlank;
+
+public record CategoriaDTO(Long id,
+                           @NotBlank(message = "Nome da categoria é obrigatório") String nome) {
+
 }

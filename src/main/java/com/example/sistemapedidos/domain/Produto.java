@@ -23,6 +23,8 @@ public class Produto {
     private BigDecimal preco;
 
     @ManyToOne
-    @JoinColumn(name="categori_id")
+    @JoinColumn(name="categori_id", nullable = false)
     private Categoria categoria;
+
+    private boolean ativo = true;
 }

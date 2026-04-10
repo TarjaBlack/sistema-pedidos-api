@@ -1,11 +1,14 @@
 package com.example.sistemapedidos.application;
 
 import com.example.sistemapedidos.api.dto.ProdutoRequestDTO;
+import com.example.sistemapedidos.application.common.FinderService;
 import com.example.sistemapedidos.domain.Categoria;
 import com.example.sistemapedidos.domain.Produto;
 import com.example.sistemapedidos.domain.exception.EntidadeNaoEncontradaException;
 import com.example.sistemapedidos.infrastructure.repositories.CategoriaRepository;
 import com.example.sistemapedidos.infrastructure.repositories.ProdutoRepository;
+import jakarta.transaction.Transactional;
+import jakarta.validation.Valid;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -14,15 +17,37 @@ import java.util.List;
 public class ProdutoService {
     private final ProdutoRepository produtoRepository;
     private final CategoriaRepository categoriaRepository;
+    private final FinderService finderService;
 
-    public ProdutoService(ProdutoRepository produtoRepository, CategoriaRepository categoriaRepository) {
+    public ProdutoService(ProdutoRepository produtoRepository, CategoriaRepository categoriaRepository, FinderService finderService) {
         this.produtoRepository = produtoRepository;
         this.categoriaRepository = categoriaRepository;
+        this.finderService = finderService;
     }
 
+    public Produto atualizar(Long id, @Valid ProdutoRequestDTO produtoRequestDTO) {
+        Produto produto = finderService.produtoOuFalhar(id);
+
+        Categoria categoria = finderService.categoriaOuFalhar(produtoRequestDTO.getCategoriaId());
+
+        produto.setNome(produtoRequestDTO.getNome());
+        produto.setPreco(produtoRequestDTO.getPreco());
+        produto.setCategoria(categoria);
+
+        return produtoRepository.save(produto);
+    }
+
+    @Transactional
+    public void excluirLogico(Long id){
+        Produto produto = finderService.produtoOuFalhar(id);
+
+        produto.setAtivo(false);
+        produtoRepository.save(produto);
+    }
+
+    @Transactional
     public Produto salvar(ProdutoRequestDTO dto){
-        Categoria categoria = categoriaRepository.findById(dto.getCategoriaId())
-                .orElseThrow(()-> new EntidadeNaoEncontradaException("Categoria não encontrada"));
+        Categoria categoria = finderService.categoriaOuFalhar(dto.getCategoriaId());
 
         Produto produto = new Produto();
         produto.setNome(dto.getNome());
@@ -33,8 +58,8 @@ public class ProdutoService {
         return produtoRepository.save(produto);
     }
 
-    public List<Produto> listarTodos(){
-        return produtoRepository.findAll();
+    public List<Produto> listarAtivos(){
+        return produtoRepository.findAllByAtivoTrue();
     }
 
     public Produto buscarPorId(Long id) {

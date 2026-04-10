@@ -19,8 +19,14 @@ public class DbSeeder implements CommandLineRunner {
     public void run(String... args) throws Exception {
         // Verifica se a tabela está vazia antes de fazer qualquer coisa
         if (categoriaRepository.count() == 0) {
-            Categoria c1 = new Categoria(null, "Eletronicos");
-            Categoria c2 = new Categoria(null, "Perifericos");
+            Categoria c1 = new Categoria();
+            c1.setNome("Eletronicos");
+            c1.setAtivo(true);
+
+            Categoria c2 = new Categoria();
+            c2.setNome("Perifericos");
+            c2.setAtivo(true);
+
 
             categoriaRepository.saveAll(List.of(c1, c2));
 

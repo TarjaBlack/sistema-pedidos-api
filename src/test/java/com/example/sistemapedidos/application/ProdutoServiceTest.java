@@ -1,20 +1,23 @@
 package com.example.sistemapedidos.application;
 
 import com.example.sistemapedidos.api.dto.ProdutoRequestDTO;
+import com.example.sistemapedidos.application.common.FinderService;
 import com.example.sistemapedidos.domain.Categoria;
 import com.example.sistemapedidos.domain.Produto;
-import com.example.sistemapedidos.infrastructure.repositories.CategoriaRepository;
+import com.example.sistemapedidos.domain.exception.EntidadeNaoEncontradaException;
 import com.example.sistemapedidos.infrastructure.repositories.ProdutoRepository;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.*;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -25,49 +28,119 @@ class ProdutoServiceTest {
     private ProdutoRepository repository;
 
     @Mock
-    private CategoriaRepository categoriaRepository;
+    private FinderService finderService;
 
     @InjectMocks
     private ProdutoService service;
 
-    @Test
-    void deveLançarExcecaoQuandoErroNoRepositorio(){
-        ProdutoRequestDTO request = new ProdutoRequestDTO("Erro", BigDecimal.valueOf(10.0), 1L);
-        Categoria categoria = new Categoria(1L, "Eletronicos");
-
-        when(categoriaRepository.findById(1L)).thenReturn(Optional.of(categoria));
-        when(repository.save(any(Produto.class))).thenThrow(new RuntimeException("Erro de conexão com o banco"));
-
-        assertThrows(RuntimeException.class, () -> {
-            service.salvar(request);
-        });
-
-        verify(repository, times(1)).save(any(Produto.class));
-
-    }
+    // --- TESTES DE SUCESSO (HAPPY PATH) ---
 
     @Test
+    @DisplayName("Deve salvar produto com sucesso")
     void deveSalvarProdutoComSucesso() {
-        // 1. Arrange
         ProdutoRequestDTO request = new ProdutoRequestDTO("Teclado", BigDecimal.valueOf(200.0), 1L);
-        Categoria categoria = new Categoria(1L, "Informática");
-        // Ajustei para BigDecimal se o seu modelo usar esse tipo, ou mantenha Double se for o caso
-        Produto produtoSalvo = new Produto(10L, "Teclado", BigDecimal.valueOf(200.0), categoria);
+        Categoria categoria = new Categoria(1L, "Informática", true);
+        Produto produtoSalvo = new Produto(10L, "Teclado", BigDecimal.valueOf(200.0), categoria, true);
 
-        // Precisamos configurar os DOIS mocks aqui
-        when(categoriaRepository.findById(anyLong())).thenReturn(Optional.of(categoria));
+        when(finderService.categoriaOuFalhar(1L)).thenReturn(categoria);
         when(repository.save(any(Produto.class))).thenReturn(produtoSalvo);
 
-        // 2. Act
         Produto resultado = service.salvar(request);
 
-        // 3. Assert
         assertNotNull(resultado);
-        assertEquals(10L, resultado.getId()); // Comparando ID com ID
         assertEquals("Teclado", resultado.getNome());
-
-        verify(categoriaRepository, times(1)).findById(1L);
-        verify(repository, times(1)).save(any(Produto.class));
+        verify(repository).save(any(Produto.class));
     }
 
+    @Test
+    @DisplayName("Deve atualizar produto com sucesso")
+    void deveAtualizarProdutoComSucesso() {
+        // Arrange
+        Long id = 1L;
+        ProdutoRequestDTO dto = new ProdutoRequestDTO("Mouse Novo", BigDecimal.valueOf(150.0), 2L);
+        Categoria novaCategoria = new Categoria(2L, "Periféricos", true);
+        Produto produtoExistente = new Produto(id, "Mouse Antigo", BigDecimal.valueOf(100.0), new Categoria(), true);
+
+        when(finderService.produtoOuFalhar(id)).thenReturn(produtoExistente);
+        when(finderService.categoriaOuFalhar(2L)).thenReturn(novaCategoria);
+        when(repository.save(any(Produto.class))).thenAnswer(i -> i.getArgument(0));
+
+        // Act
+        Produto resultado = service.atualizar(id, dto);
+
+        // Assert
+        assertEquals("Mouse Novo", resultado.getNome());
+        assertEquals(novaCategoria, resultado.getCategoria());
+        verify(repository).save(produtoExistente);
+    }
+
+    @Test
+    @DisplayName("Deve realizar o delete lógico corretamente")
+    void deveRealizarExcluirLogico() {
+        // Arrange
+        Long id = 1L;
+        Produto produto = new Produto(id, "Cadeira", BigDecimal.valueOf(500), new Categoria(), true);
+        when(finderService.produtoOuFalhar(id)).thenReturn(produto);
+
+        // Act
+        service.excluirLogico(id);
+
+        // Assert
+        assertFalse(produto.isAtivo());
+        verify(repository).save(produto);
+    }
+
+    @Test
+    @DisplayName("Deve buscar produto por ID com sucesso")
+    void deveBuscarProdutoPorId() {
+        Long id = 1L;
+        Produto produto = new Produto(id, "Cadeira", BigDecimal.valueOf(500), new Categoria(), true);
+        when(repository.findById(id)).thenReturn(Optional.of(produto));
+
+        Produto resultado = service.buscarPorId(id);
+
+        assertNotNull(resultado);
+        verify(repository).findById(id);
+    }
+
+    @Test
+    @DisplayName("Deve listar todos os produtos ativos")
+    void deveListarApenasProdutosAtivos() {
+        when(repository.findAllByAtivoTrue()).thenReturn(List.of(new Produto()));
+
+        List<Produto> produtos = service.listarAtivos();
+
+        assertFalse(produtos.isEmpty());
+        verify(repository).findAllByAtivoTrue();
+    }
+
+    // --- TESTES DE EXCEÇÃO (EDGE CASES) ---
+
+    @Test
+    @DisplayName("Deve lançar exceção no buscarPorId quando não encontrar")
+    void deveLancarExcecaoNoBuscarPorIdInexistente() {
+        when(repository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThrows(EntidadeNaoEncontradaException.class, () -> service.buscarPorId(1L));
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção no salvar quando categoria não existe")
+    void deveLancarExcecaoQuandoCategoriaInexistente() {
+        ProdutoRequestDTO request = new ProdutoRequestDTO("Erro", BigDecimal.TEN, 99L);
+        when(finderService.categoriaOuFalhar(99L)).thenThrow(new EntidadeNaoEncontradaException("Erro"));
+
+        assertThrows(EntidadeNaoEncontradaException.class, () -> service.salvar(request));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Deve propagar erro do repositório ao salvar")
+    void deveLancarExcecaoQuandoErroNoRepositorio() {
+        ProdutoRequestDTO request = new ProdutoRequestDTO("Erro", BigDecimal.TEN, 1L);
+        when(finderService.categoriaOuFalhar(1L)).thenReturn(new Categoria());
+        when(repository.save(any())).thenThrow(new RuntimeException("DB Error"));
+
+        assertThrows(RuntimeException.class, () -> service.salvar(request));
+    }
 }
