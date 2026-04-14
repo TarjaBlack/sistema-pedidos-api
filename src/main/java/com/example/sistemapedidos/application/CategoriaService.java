@@ -1,6 +1,9 @@
 package com.example.sistemapedidos.application;
 
 import com.example.sistemapedidos.api.dto.CategoriaDTO;
+import com.example.sistemapedidos.api.dto.CategoriaRequestDTO;
+import com.example.sistemapedidos.api.dto.CategoriaResponseDTO;
+import com.example.sistemapedidos.api.mapper.CategoriaMapper;
 import com.example.sistemapedidos.application.common.FinderService;
 import com.example.sistemapedidos.domain.Categoria;
 import com.example.sistemapedidos.infrastructure.repositories.CategoriaRepository;
@@ -11,20 +14,27 @@ import java.util.List;
 
 @Service
 public class CategoriaService {
-    private final CategoriaRepository categoriaRepository;
+    private final CategoriaRepository repository;
     private final FinderService finderService;
+    private final CategoriaMapper mapper;
 
-
-    public CategoriaService(CategoriaRepository categoriaRepository, FinderService finderService) {
-        this.categoriaRepository = categoriaRepository;
+    public CategoriaService(CategoriaRepository repository,
+                            CategoriaMapper mapper,
+                            FinderService finderService) {
+        this.repository = repository;
+        this.mapper = mapper;
         this.finderService = finderService;
     }
 
     @Transactional
-    public Categoria salvar(CategoriaDTO dto) {
+    public CategoriaResponseDTO salvar(CategoriaRequestDTO dto) {
         Categoria categoria = new Categoria();
         categoria.setNome(dto.nome());
-        return categoriaRepository.save(categoria);
+        categoria.setAtivo(true);
+
+        categoria = repository.save(categoria);
+
+        return new CategoriaResponseDTO(categoria);
     }
 
     @Transactional
@@ -32,7 +42,7 @@ public class CategoriaService {
         Categoria categoria = finderService.categoriaOuFalhar(id);
 
         categoria.setNome(dto.nome());
-        return categoriaRepository.save(categoria);
+        return repository.save(categoria);
     }
 
     @Transactional
@@ -40,10 +50,10 @@ public class CategoriaService {
         Categoria categoria = finderService.categoriaOuFalhar(id);
 
         categoria.setAtivo(false);
-        categoriaRepository.save(categoria);
+        repository.save(categoria);
     }
 
     public List<Categoria> listarAtivas(){
-        return  categoriaRepository.findAllByAtivoTrue();
+        return  repository.findAllByAtivoTrue();
     }
 }

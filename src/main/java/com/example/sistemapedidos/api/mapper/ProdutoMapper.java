@@ -8,7 +8,8 @@ import org.mapstruct.ReportingPolicy;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ProdutoMapper {
-    @Mapping(source="categoria.id", target="categoria.id")
-    @Mapping(source="categoria.nome", target="categoria.nome")
+
+    // O MapStruct entende que 'categoria.nome' deve ir para 'nomeCategoria'
+    @Mapping(source = "categoria.nome", target = "nomeCategoria")
     ProdutoResponseDTO toProdutoResponseDTO(Produto produto);
 }

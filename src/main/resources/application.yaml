@@ -1,10 +1,26 @@
-# Configuração Padrão (PostgreSQL - Docker)
+# Configuração Global
 spring:
   application:
     name: sistema-pedidos
   
   profiles:
-    active: dev # Define que o perfil 'dev' (Postgres) é o padrão
+    active: dev
+
+  threads:
+    virtual:
+      enabled: true
+
+server:
+  error:
+    include-message: always
+    include-binding-errors: always
+
+---
+# Configuração de Desenvolvimento (PostgreSQL)
+spring:
+  config:
+    activate:
+      on-profile: dev
 
   datasource:
     url: jdbc:postgresql://localhost:5432/pedidos_db
@@ -13,35 +29,41 @@ spring:
     driver-class-name: org.postgresql.Driver
 
   jpa:
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: update
     show-sql: true
     properties:
       hibernate:
         format_sql: true
-
-server:
-  error:
-    include-message: always
-    include-binding-errors: always
+        # Performance: Ajuda o Postgres a lidar com IDs em lote
+        jdbc:
+          batch_size: 20
+          order_inserts: true
 
 ---
 # Configuração para Testes (H2)
-# Este bloco só é ativado se você usar @ActiveProfiles("test")
 spring:
   config:
     activate:
       on-profile: test
 
   datasource:
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+    # Ajuste na URL para estabilidade em testes de integração
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
     username: sa
-    password:
+    password: ""
+
+  h2:
+    console:
+      enabled: true # Útil para depurar se o banco real está populado
 
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: create-drop
     show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+      # Garante que o Hibernate crie o schema antes de rodar os testes
+      defer-datasource-initialization: true

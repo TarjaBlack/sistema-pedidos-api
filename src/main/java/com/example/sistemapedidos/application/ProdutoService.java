@@ -1,6 +1,7 @@
 package com.example.sistemapedidos.application;
 
 import com.example.sistemapedidos.api.dto.ProdutoRequestDTO;
+import com.example.sistemapedidos.api.dto.ProdutoResponseDTO;
 import com.example.sistemapedidos.application.common.FinderService;
 import com.example.sistemapedidos.domain.Categoria;
 import com.example.sistemapedidos.domain.Produto;
@@ -44,16 +45,19 @@ public class ProdutoService {
     }
 
     @Transactional
-    public Produto salvar(ProdutoRequestDTO dto){
+    public ProdutoResponseDTO salvar(ProdutoRequestDTO dto){
         Categoria categoria = finderService.categoriaOuFalhar(dto.getCategoriaId());
 
         Produto produto = new Produto();
         produto.setNome(dto.getNome());
         produto.setPreco(dto.getPreco());
         produto.setCategoria(categoria);
+        produto.setAtivo(true);
+
+        produto = produtoRepository.save(produto);
 
 
-        return produtoRepository.save(produto);
+        return new ProdutoResponseDTO(produto);
     }
 
     public List<Produto> listarAtivos(){

@@ -1,6 +1,7 @@
 package com.example.sistemapedidos.application;
 
 import com.example.sistemapedidos.api.dto.ProdutoRequestDTO;
+import com.example.sistemapedidos.api.dto.ProdutoResponseDTO;
 import com.example.sistemapedidos.application.common.FinderService;
 import com.example.sistemapedidos.domain.Categoria;
 import com.example.sistemapedidos.domain.Produto;
@@ -45,10 +46,11 @@ class ProdutoServiceTest {
         when(finderService.categoriaOuFalhar(1L)).thenReturn(categoria);
         when(repository.save(any(Produto.class))).thenReturn(produtoSalvo);
 
-        Produto resultado = service.salvar(request);
+        ProdutoResponseDTO resultado = service.salvar(request);
 
         assertNotNull(resultado);
-        assertEquals("Teclado", resultado.getNome());
+        assertEquals(10L, resultado.id());
+        assertEquals("Teclado", resultado.nome());
         verify(repository).save(any(Produto.class));
     }
 

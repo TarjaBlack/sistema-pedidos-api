@@ -1,6 +1,7 @@
 package com.example.sistemapedidos.application;
 
 import com.example.sistemapedidos.api.dto.ProdutoRequestDTO;
+import com.example.sistemapedidos.api.dto.ProdutoResponseDTO;
 import com.example.sistemapedidos.domain.Categoria;
 import com.example.sistemapedidos.domain.Produto;
 import com.example.sistemapedidos.infrastructure.repositories.CategoriaRepository;
@@ -50,15 +51,14 @@ class ProdutoServiceIT {
         ProdutoRequestDTO dto = new ProdutoRequestDTO("Placa de Vídeo", new BigDecimal("3500.00"), categoriaSalva.getId());
 
         // Act
-        Produto resultado = produtoService.salvar(dto);
+        ProdutoResponseDTO resultado = produtoService.salvar(dto);
 
         // Assert
-        assertNotNull(resultado.getId());
-        assertEquals("Placa de Vídeo", resultado.getNome());
+        assertNotNull(resultado.id());
+        assertEquals("Placa de Vídeo", resultado.nome());
 
         // Verificação extra: o dado realmente existe no banco?
-        assertTrue(produtoRepository.findById(resultado.getId()).isPresent());
-    }
+        assertTrue(produtoRepository.findById(resultado.id()).isPresent());    }
 
     @Test
     @DisplayName("Deve refletir o delete lógico no banco de dados")

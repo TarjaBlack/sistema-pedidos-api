@@ -5,11 +5,15 @@ import com.example.sistemapedidos.api.dto.ProdutoResponseDTO;
 import com.example.sistemapedidos.api.mapper.ProdutoMapper;
 import com.example.sistemapedidos.application.ProdutoService;
 import com.example.sistemapedidos.domain.Produto;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 
 @RestController
@@ -35,12 +39,19 @@ public class ProdutoController {
         service.excluirLogico(id);
     }
 
+    @Operation(summary = "Cria um novo produto", description = "Persiste um produto no banco e retorna o DTO de resposta")
+    @ApiResponse(responseCode = "201", description = "Produto criado com sucesso")
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public ProdutoResponseDTO criar(@Valid @RequestBody ProdutoRequestDTO dto){
-        Produto produtoSalvo = service.salvar(dto);
+    public ResponseEntity<ProdutoResponseDTO> criar(@Valid @RequestBody ProdutoRequestDTO dto) {
+        // O service já retorna o DTO ou a Entidade convertida
+        ProdutoResponseDTO response = service.salvar(dto);
 
-        return produtoMapper.toProdutoResponseDTO(produtoSalvo);
+        URI uri = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(response.id()) // Supondo que o Record tem o campo id
+                .toUri();
+
+        return ResponseEntity.created(uri).body(response);
     }
 
     @GetMapping

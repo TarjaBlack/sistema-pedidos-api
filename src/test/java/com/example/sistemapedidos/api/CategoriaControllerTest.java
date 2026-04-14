@@ -1,6 +1,8 @@
 package com.example.sistemapedidos.api;
 
 import com.example.sistemapedidos.api.dto.CategoriaDTO;
+import com.example.sistemapedidos.api.dto.CategoriaRequestDTO;
+import com.example.sistemapedidos.api.dto.CategoriaResponseDTO;
 import com.example.sistemapedidos.application.CategoriaService;
 import com.example.sistemapedidos.domain.Categoria;
 import com.example.sistemapedidos.domain.exception.EntidadeNaoEncontradaException;
@@ -46,16 +48,18 @@ class CategoriaControllerTest {
     @Test
     @DisplayName("Deve criar categoria com sucesso")
     void deveCriarCategoria() throws Exception {
-        CategoriaDTO dto = new CategoriaDTO(null, "Nova Categoria");
-        Categoria categoriaSalva = new Categoria(1L, "Nova Categoria", true);
+        CategoriaRequestDTO requestDTO = new CategoriaRequestDTO("Nova Categoria");
+        CategoriaResponseDTO responseDTO = new CategoriaResponseDTO(1L, "Nova Categoria", true);
 
-        when(service.salvar(any(CategoriaDTO.class))).thenReturn(categoriaSalva);
+
+        when(service.salvar(any(CategoriaRequestDTO.class))).thenReturn(responseDTO);
 
         mockMvc.perform(post("/categorias")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(dto)))
+                        .content(objectMapper.writeValueAsString(requestDTO)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(1L));
+                .andExpect(jsonPath("$.id").value(1L))
+                .andExpect(jsonPath("$.nome").value("Nova Categoria"));
     }
 
     @Test

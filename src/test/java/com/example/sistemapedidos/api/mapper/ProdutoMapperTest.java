@@ -29,9 +29,11 @@ class ProdutoMapperTest {
         ProdutoResponseDTO dto = produtoMapper.toProdutoResponseDTO(produto);
 
         assertNotNull(dto);
-        assertEquals(produto.getId(), dto.getId());
-        assertEquals(produto.getNome(), dto.getNome());
-        assertEquals(produto.getPreco(), dto.getPreco());
+        assertEquals(produto.getId(), dto.id());
+        assertEquals(produto.getNome(), dto.nome());
+        assertEquals(produto.getPreco(), dto.preco());
+
+        assertEquals(categoria.getNome(), dto.nomeCategoria());
     }
 
 }

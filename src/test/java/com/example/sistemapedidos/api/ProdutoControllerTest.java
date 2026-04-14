@@ -101,11 +101,9 @@ class ProdutoControllerTest {
     @DisplayName("Deve criar produto com sucesso")
     void deveCriarProdutoComSucesso() throws Exception {
         ProdutoRequestDTO request = new ProdutoRequestDTO("Mouse", BigDecimal.TEN, 1L);
-        Produto produtoSimulado = new Produto(1L, "Mouse", BigDecimal.TEN, new Categoria(), true);
         ProdutoResponseDTO responseSimulado = new ProdutoResponseDTO(1L, "Mouse", BigDecimal.TEN, null);
 
-        when(service.salvar(any())).thenReturn(produtoSimulado);
-        when(mapper.toProdutoResponseDTO(any())).thenReturn(responseSimulado);
+        when(service.salvar(any(ProdutoRequestDTO.class))).thenReturn(responseSimulado);
 
         mockMvc.perform(post("/produtos")
                         .contentType(MediaType.APPLICATION_JSON)
