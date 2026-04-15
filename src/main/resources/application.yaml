@@ -1,14 +1,45 @@
-# Configuração Global
+# ===================================================================
+# Configuração Global (Aplicada a todos os perfis)
+# ===================================================================
 spring:
   application:
     name: sistema-pedidos
   
+  # Perfil ativo quando nenhum outro é especificado (ex: java -jar app.jar)
   profiles:
     active: dev
 
+  # Habilita Virtual Threads (requer Java 21+)
   threads:
     virtual:
       enabled: true
+
+  # Configuração do Kafka
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: grupo-pedidos
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.example.sistemapedidos.api.dto"
+
+  # Configuração do envio de email
+  mail:
+    host: sandbox.smtp.mailtrap.io
+    port: 2525
+    # ATENÇÃO: É uma boa prática usar variáveis de ambiente para credenciais.
+    username: ${MAIL_USERNAME:seu_usuario_aqui}
+    password: ${MAIL_PASSWORD:sua_senha_aqui}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 server:
   error:
@@ -16,7 +47,10 @@ server:
     include-binding-errors: always
 
 ---
+# ===================================================================
 # Configuração de Desenvolvimento (PostgreSQL)
+# Ativado com o perfil 'dev'
+# ===================================================================
 spring:
   config:
     activate:
@@ -41,14 +75,17 @@ spring:
           order_inserts: true
 
 ---
-# Configuração para Testes (H2)
+# ===================================================================
+# Configuração para Testes (H2 In-Memory)
+# Ativado com o perfil 'test'
+# ===================================================================
 spring:
   config:
     activate:
       on-profile: test
 
   datasource:
-    # Ajuste na URL para estabilidade em testes de integração
+    # URL ajustada para estabilidade em testes de integração
     url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
     username: sa
@@ -62,8 +99,8 @@ spring:
     hibernate:
       ddl-auto: create-drop
     show-sql: true
+    # Garante que o Hibernate crie o schema antes de rodar os testes
+    defer-datasource-initialization: true
     properties:
       hibernate:
         format_sql: true
-      # Garante que o Hibernate crie o schema antes de rodar os testes
-      defer-datasource-initialization: true

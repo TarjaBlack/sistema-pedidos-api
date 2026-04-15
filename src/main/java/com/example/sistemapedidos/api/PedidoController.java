@@ -51,7 +51,6 @@ public class PedidoController {
     @Operation(summary = "Busca um pedido por ID", description = "Retorna os detalhes do pedido e seus itens")
     @GetMapping("/{id}")
     public ResponseEntity<PedidoResponseDTO> buscarPorId(@PathVariable Long id) {
-        // Aproveitando o seu novo padrão de retorno
         PedidoResponseDTO response = pedidoService.buscarPorId(id);
         return ResponseEntity.ok(response);
     }

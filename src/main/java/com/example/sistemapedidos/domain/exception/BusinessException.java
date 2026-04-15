@@ -3,8 +3,9 @@ package com.example.sistemapedidos.domain.exception;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
-public class EntidadeNaoEncontradaException extends RuntimeException {
-    public EntidadeNaoEncontradaException(String mensagem){
-        super(mensagem);
+@ResponseStatus(HttpStatus.BAD_REQUEST)
+public class BusinessException extends RuntimeException {
+    public BusinessException(String message) {
+        super(message);
     }
 }

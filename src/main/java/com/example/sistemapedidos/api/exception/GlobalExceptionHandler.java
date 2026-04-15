@@ -1,5 +1,6 @@
 package com.example.sistemapedidos.api.exception;
 
+import com.example.sistemapedidos.domain.exception.BusinessException;
 import com.example.sistemapedidos.domain.exception.EntidadeNaoEncontradaException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +17,7 @@ import java.util.stream.Collectors;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(EntidadeNaoEncontradaException.class)
+    @ExceptionHandler({EntidadeNaoEncontradaException.class, jakarta.persistence.EntityNotFoundException.class})
     public ResponseEntity<ApiError> handleEntidadeNaoEncontrada(EntidadeNaoEncontradaException ex, HttpServletRequest request) {
 
         log.error("Recurso não encontrado: {} | Path: {}", ex.getMessage(), request.getRequestURI());
@@ -50,5 +51,19 @@ public class GlobalExceptionHandler {
         );
 
         return  ResponseEntity.status((HttpStatus.BAD_REQUEST)).body(error);
+    }
+    @ExceptionHandler(com.example.sistemapedidos.domain.exception.BusinessException.class)
+    public ResponseEntity<ApiError> handleBusinessException(BusinessException ex, HttpServletRequest request) {
+        log.warn("Regra de negócio violada: {} | Path: {}", ex.getMessage(), request.getRequestURI());
+
+        ApiError error = new ApiError(
+                LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                "Regra de negócio violada",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 }

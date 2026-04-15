@@ -9,8 +9,10 @@ import com.example.sistemapedidos.domain.ItemPedido;
 import com.example.sistemapedidos.domain.Pedido;
 import com.example.sistemapedidos.domain.Produto;
 import com.example.sistemapedidos.domain.enums.PedidoStatus;
+import com.example.sistemapedidos.domain.exception.BusinessException;
 import com.example.sistemapedidos.infrastructure.repositories.PedidoRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,22 +24,22 @@ import java.time.LocalDateTime;
 public class PedidoService {
     private final PedidoRepository repository;
     private final FinderService finderService;
+    private final KafkaTemplate<String, PedidoResponseDTO> kafkaTemplate;
 
     @Transactional
     public PedidoResponseDTO atualizarStatus(Long id, Integer novoStatusCodigo) {
-        // Busca via FinderService (centraliza o 404)
         Pedido pedido = finderService.pedidoOuFalhar(id);
-
-        // Converte o código para Enum (valida internamente no valueOf)
         PedidoStatus novoStatus = PedidoStatus.valueOf(novoStatusCodigo);
 
-        // Regra de Negócio: Impede alteração de pedidos finalizados
         validarTransicao(pedido.getStatus(), novoStatus);
 
         pedido.setStatus(novoStatus);
 
-        // Salva e já retorna convertido para Record
-        return new PedidoResponseDTO(repository.save(pedido));
+        PedidoResponseDTO response = new PedidoResponseDTO(repository.save(pedido));
+
+        kafkaTemplate.send("pedido-status-events", response.id().toString(), response);
+
+        return response;
     }
 
     @Transactional
@@ -85,8 +87,8 @@ public class PedidoService {
     }
 
     private void validarTransicao(PedidoStatus atual, PedidoStatus proximo) {
-        if (atual == PedidoStatus.CANCELADO || atual == PedidoStatus.ENTREGUE) {
-            throw new IllegalStateException("Não é possível alterar o status de um pedido já finalizado.");
+        if (!atual.podeMudarStatus()) {
+            throw new BusinessException("Não é possível alterar o status de um pedido já finalizado (Entregue ou Cancelado).");
         }
     }
 }

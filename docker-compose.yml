@@ -1,14 +1,59 @@
 services:
   db:
-    image: postgres:18 # Usando a versão que você baixou
+    image: postgres:16 # A versão 18 ainda não é LTS. A 16 ou 17 são mais recomendadas.
     container_name: postgres-sistema
     environment:
       - POSTGRES_PASSWORD=root
       - POSTGRES_DB=pedidos_db
+      - POSTGRES_USER=postgres
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql # Mapeamento dentro do serviço
+      - pgdata:/var/lib/postgresql/data # Mapeamento corrigido
 
-volumes: # Seção global de volumes
-  pgdata: # Observe os dois pontos aqui. Não coloque nada depois.
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin-sistema
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@marcoslabels.com
+      PGADMIN_DEFAULT_PASSWORD: root
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: zookeeper-sistema
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      # ADICIONE ESTA LINHA ABAIXO PARA RESOLVER O ERRO
+      KAFKA_NODE_ID: 1
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui-sistema
+    ports:
+      - "9000:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local-marcos-labels
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    depends_on:
+      - kafka
+
+volumes:
+  pgdata:

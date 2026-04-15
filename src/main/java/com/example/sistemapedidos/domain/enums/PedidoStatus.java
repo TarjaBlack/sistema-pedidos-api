@@ -19,10 +19,14 @@ public enum PedidoStatus {
         return code;
     }
 
+    public boolean podeMudarStatus(){
+        return this != ENTREGUE && this != CANCELADO;
+    }
+
     public static PedidoStatus valueOf(int code) {
         return Arrays.stream(PedidoStatus.values())
                 .filter(v -> v.getCode() == code)
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Código inválido"));
+                .orElseThrow(() -> new IllegalArgumentException("Código inválido: " + code));
     }
 }

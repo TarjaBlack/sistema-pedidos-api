@@ -1,17 +1,15 @@
 package com.example.sistemapedidos.application;
 
 import com.example.sistemapedidos.api.dto.ItemRequestDTO;
-import com.example.sistemapedidos.api.dto.PedidoDTO;
 import com.example.sistemapedidos.api.dto.PedidoRequestDTO;
 import com.example.sistemapedidos.api.dto.PedidoResponseDTO;
 import com.example.sistemapedidos.application.common.FinderService;
-import com.example.sistemapedidos.domain.Categoria;
 import com.example.sistemapedidos.domain.ItemPedido;
 import com.example.sistemapedidos.domain.Pedido;
 import com.example.sistemapedidos.domain.Produto;
 import com.example.sistemapedidos.domain.enums.PedidoStatus;
+import com.example.sistemapedidos.domain.exception.BusinessException;
 import com.example.sistemapedidos.infrastructure.repositories.PedidoRepository;
-import com.example.sistemapedidos.infrastructure.repositories.ProdutoRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -20,12 +18,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.kafka.core.KafkaTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -37,28 +35,65 @@ class PedidoServiceTest {
     private PedidoRepository pedidoRepository;
 
     @Mock
-    private ProdutoRepository produtoRepository;
+    private KafkaTemplate<String, PedidoResponseDTO> kafkaTemplate;
 
     @Mock
-    private FinderService finderService; // O mock que estava vindo nulo
+    private FinderService finderService;
 
     @InjectMocks
-    private PedidoService pedidoService; // Mockito injetará os mocks acima aqui
+    private PedidoService pedidoService;
 
     private PedidoRequestDTO pedidoRequest;
-    private Produto produto1;
-    private Produto produto2;
 
     @BeforeEach
     void setUp() {
-        Categoria categoria = new Categoria(1L, "Informática", true);
-        produto1 = new Produto(1L, "Mouse", BigDecimal.valueOf(50.0), categoria, true);
-        produto2 = new Produto(2L, "Teclado", BigDecimal.valueOf(100.0), categoria, true);
-
         ItemRequestDTO item1 = new ItemRequestDTO(1L, 2);
         ItemRequestDTO item2 = new ItemRequestDTO(2L, 1);
         
         pedidoRequest = new PedidoRequestDTO(1L, List.of(item1, item2));
+    }
+
+    @Test
+    @DisplayName("Deve buscar um pedido por ID com sucesso")
+    void buscarPorId_DeveRetornarPedido_QuandoIdExiste() {
+        // Arrange
+        Long pedidoId = 100L;
+        Pedido pedido = new Pedido();
+        pedido.setId(pedidoId);
+        pedido.setStatus(PedidoStatus.AGUARDANDO_PAGAMENTO);
+        pedido.setDataCriacao(LocalDateTime.now());
+        pedido.setValorTotal(new BigDecimal("150.00"));
+        pedido.setItens(new ArrayList<>()); // Lista vazia para evitar NullPointerException no DTO
+
+        when(finderService.pedidoOuFalhar(pedidoId)).thenReturn(pedido);
+
+        // Act
+        PedidoResponseDTO resultado = pedidoService.buscarPorId(pedidoId);
+
+        // Assert
+        assertNotNull(resultado);
+        assertEquals(pedidoId, resultado.id());
+        assertEquals(PedidoStatus.AGUARDANDO_PAGAMENTO.name(), resultado.status());
+        assertEquals(new BigDecimal("150.00"), resultado.valorTotal());
+        
+        verify(finderService, times(1)).pedidoOuFalhar(pedidoId);
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção ao buscar pedido com ID inexistente")
+    void buscarPorId_DeveLancarExcecao_QuandoIdNaoExiste() {
+        // Arrange
+        Long pedidoId = 999L;
+        String mensagemEsperada = "Pedido não encontrado";
+        
+        when(finderService.pedidoOuFalhar(pedidoId))
+                .thenThrow(new EntityNotFoundException(mensagemEsperada));
+
+        // Act & Assert
+        EntityNotFoundException exception = assertThrows(EntityNotFoundException.class, () -> pedidoService.buscarPorId(pedidoId));
+
+        assertEquals(mensagemEsperada, exception.getMessage());
+        verify(finderService, times(1)).pedidoOuFalhar(pedidoId);
     }
 
     @Test
@@ -80,11 +115,6 @@ class PedidoServiceTest {
         // 2. Configurar o FinderService para retornar esses produtos
         when(finderService.produtoOuFalhar(1L)).thenReturn(produto1);
         when(finderService.produtoOuFalhar(2L)).thenReturn(produto2);
-
-        // 3. Criar o RequestDTO (2 unidades do Prod1 + 1 unidade do Prod2 = 200.00)
-        ItemRequestDTO item1 = new ItemRequestDTO(1L, 2);
-        ItemRequestDTO item2 = new ItemRequestDTO(2L, 1);
-        PedidoRequestDTO pedidoRequest = new PedidoRequestDTO(1L, List.of(item1, item2));
 
         // 4. Simular o objeto que o Repository retornaria após o save
         Pedido pedidoSalvo = new Pedido();
@@ -118,8 +148,7 @@ class PedidoServiceTest {
         assertEquals(2, resultado.itens().size());
 
         // Validação do cálculo (200.00)
-        // Usamos compareTo == 0 para ignorar diferenças de escala (200.0 vs 200.00)
-        assertTrue(new BigDecimal("200.00").compareTo(resultado.valorTotal()) == 0);
+        assertEquals(0, new BigDecimal("200.00").compareTo(resultado.valorTotal()));
 
         // Verifica se as dependências foram chamadas corretamente
         verify(finderService, times(1)).produtoOuFalhar(1L);
@@ -136,9 +165,7 @@ class PedidoServiceTest {
 
         // Act & Assert
         // Capturamos a exceção retornada pelo assertThrows na variável 'exception'
-        EntityNotFoundException exception = assertThrows(EntityNotFoundException.class, () -> {
-            pedidoService.inserir(pedidoRequest);
-        });
+        EntityNotFoundException exception = assertThrows(EntityNotFoundException.class, () -> pedidoService.inserir(pedidoRequest));
 
         // Agora o símbolo 'exception' existe e pode ser validado
         assertEquals(mensagemEsperada, exception.getMessage());
@@ -148,5 +175,107 @@ class PedidoServiceTest {
 
         // Garante que o fluxo foi interrompido e o repositório NUNCA foi chamado
         verify(pedidoRepository, never()).save(any(Pedido.class));
+    }
+
+    @Test
+    @DisplayName("Deve atualizar o status do pedido e enviar evento para o Kafka")
+    void atualizarStatus_DeveAtualizarStatusEEnviarEvento() {
+        // --- ARRANGE ---
+        Long pedidoId = 1L;
+        Integer novoStatusCodigo = 2; // Supondo que 2 seja PAGO
+        PedidoStatus novoStatus = PedidoStatus.PAGO;
+
+        Pedido pedido = new Pedido();
+        pedido.setId(pedidoId);
+        pedido.setStatus(PedidoStatus.AGUARDANDO_PAGAMENTO);
+        pedido.setDataCriacao(LocalDateTime.now());
+        pedido.setValorTotal(new BigDecimal("100.00"));
+        pedido.setItens(new ArrayList<>());
+
+        // Configura os mocks
+        when(finderService.pedidoOuFalhar(pedidoId)).thenReturn(pedido);
+
+        // O repository.save retorna o próprio pedido (estratégia comum em mocks)
+        when(pedidoRepository.save(any(Pedido.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // --- ACT ---
+        PedidoResponseDTO resultado = pedidoService.atualizarStatus(pedidoId, novoStatusCodigo);
+
+        // --- ASSERT ---
+        assertNotNull(resultado);
+        assertEquals("PAGO", resultado.status());
+        assertEquals(pedidoId, resultado.id());
+
+        // Verificamos se o status foi realmente alterado na entidade
+        assertEquals(novoStatus, pedido.getStatus());
+
+        // VERIFICAÇÃO KAFKA: O ponto principal da atualização
+        // Verificamos se o método send foi chamado uma vez para o tópico correto
+        verify(kafkaTemplate, times(1)).send(
+                eq("pedido-status-events"),
+                eq(pedidoId.toString()),
+                any(PedidoResponseDTO.class)
+        );
+
+        // Verifica se o save foi chamado
+        verify(pedidoRepository, times(1)).save(any(Pedido.class));
+    }
+
+    @Test
+    @DisplayName("Deve lançar BusinessException ao tentar transição de status inválida")
+    void atualizarStatus_DeveLancarExcecao_QuandoTransicaoInvalida() {
+        // Arrange
+        Long pedidoId = 1L;
+        Pedido pedidoEntregue = new Pedido();
+        pedidoEntregue.setStatus(PedidoStatus.ENTREGUE); // Status que impede mudança
+
+        when(finderService.pedidoOuFalhar(pedidoId)).thenReturn(pedidoEntregue);
+
+        // Act & Assert
+        assertThrows(BusinessException.class, () ->
+                pedidoService.atualizarStatus(pedidoId, 5) // Tentando cancelar um pedido entregue
+        );
+
+        // Verificação de segurança: O Kafka e o Repository NUNCA devem ser chamados
+        verify(kafkaTemplate, never()).send(anyString(), anyString(), any());
+        verify(pedidoRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Deve lançar EntityNotFoundException ao tentar atualizar status de pedido inexistente")
+    void atualizarStatus_DeveLancarExcecao_QuandoPedidoNaoExiste() {
+        // Arrange
+        Long pedidoId = 999L;
+        when(finderService.pedidoOuFalhar(pedidoId))
+                .thenThrow(new EntityNotFoundException("Pedido não encontrado"));
+
+        // Act & Assert
+        assertThrows(EntityNotFoundException.class, () ->
+                pedidoService.atualizarStatus(pedidoId, 2)
+        );
+
+        // Verificação de segurança: O Kafka e o Repository NUNCA devem ser chamados
+        verify(kafkaTemplate, never()).send(anyString(), anyString(), any());
+        verify(pedidoRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Deve lançar IllegalArgumentException para código de status inválido")
+    void atualizarStatus_DeveLancarExcecao_QuandoCodigoStatusInvalido() {
+        // Arrange
+        Long pedidoId = 1L;
+        Pedido pedido = new Pedido();
+        pedido.setStatus(PedidoStatus.AGUARDANDO_PAGAMENTO);
+
+        when(finderService.pedidoOuFalhar(pedidoId)).thenReturn(pedido);
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class, () ->
+                pedidoService.atualizarStatus(pedidoId, 99) // Código 99 não existe no Enum
+        );
+
+        // Verificação de segurança: O Kafka e o Repository NUNCA devem ser chamados
+        verify(kafkaTemplate, never()).send(anyString(), anyString(), any());
+        verify(pedidoRepository, never()).save(any());
     }
 }
